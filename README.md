@@ -8,6 +8,19 @@ Portfolio site for landscape, aerial and night-sky photography. A single static 
 - `site/p/` holds two sizes of each photo: `<id>-s.jpg` (760 px, gallery) and `<id>-l.jpg` (1600 px, lightbox and hero).
 - `app.py` serves `site/`, a `/healthz` check for Railway, and `/api/contact` for the enquiry form.
 
+## Adding photos
+Export JPEGs (full size is fine; iPhone HEIC files need exporting as JPEG first), then:
+```bash
+pip install pillow
+python tools/add_photos.py "Okanagan" ~/Pictures/export/*.jpg
+python tools/add_photos.py "Utah" watchman.jpg --title "The Watchman at last light"
+```
+The script makes the two web sizes in `site/p/`, reads camera, lens, settings, date and GPS from each file, and adds the photos to the front of that collection in `site/photos.json`. Collections with filters on the page: Utah, Nevada, Okanagan, Vancouver Island, Canadian Rockies, Maui, Drone Landscapes, Astrophotography, Wildlife.
+
+Commit and push to `main`; Railway redeploys in about a minute.
+
+To remove a photo, delete its entry from `site/photos.json` and its two files from `site/p/`. To retitle one, set its `cap` field.
+
 ## Run locally
 ```bash
 python3 -m venv venv && source venv/bin/activate
