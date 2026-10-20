@@ -298,7 +298,7 @@ footer img{height:30px;width:auto;opacity:.7}
     <form id="contact" novalidate>
       <div class="eyebrow">Contact</div>
       <h3>Prints, licensing, commissions</h3>
-      <div class="direct"><span>Call <b>250-864-9174</b></span><span>Kelowna, B.C.</span></div>
+      <div class="direct"><span>Kelowna, B.C.</span></div>
       <div class="seg" role="radiogroup" aria-label="Enquiry type">
         <input type="radio" name="kind" id="k-print" value="print" checked><label for="k-print">Print</label>
         <input type="radio" name="kind" id="k-lic" value="license"><label for="k-lic">Licensing</label>
@@ -426,7 +426,7 @@ $("#contact").addEventListener("submit",e=>{e.preventDefault();const f=e.target,
   const btn=f.querySelector("button[type=submit]");btn.disabled=true;s.textContent="Sending…";
   fetch("/api/contact",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:f.kind.value,name:f["c-name"].value,email:f["c-email"].value,frame:f["c-frame"].value,message:f["c-msg"].value})})
     .then(r=>{if(!r.ok)throw r;s.textContent="Thanks, your message was sent. I'll reply by email.";f.reset()})
-    .catch(()=>{s.textContent="The message didn't send. Please call 250-864-9174 instead."})
+    .catch(()=>{s.textContent="The message didn't send. Please try again later."})
     .finally(()=>{btn.disabled=false})});
 });
 </script>

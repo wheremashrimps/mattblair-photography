@@ -32,7 +32,7 @@ python app.py   # http://localhost:5000
 New Project → Deploy from GitHub repo → this repo. Nixpacks detects Python and uses `railway.json`.
 
 ### Contact form
-The form emails enquiries once these variables are set on the Railway service (until then it asks visitors to phone instead):
+The form emails enquiries once these variables are set on the Railway service (until then, submitting the form shows an error asking visitors to try again later):
 
 | Variable | Example |
 |---|---|
