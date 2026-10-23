@@ -5,7 +5,7 @@ Portfolio site for landscape, aerial and night-sky photography. A single static 
 ## Layout
 - `site/index.html` is the whole page: styles, markup and script.
 - `site/photos.json` lists every photo: collection, region, aspect ratio, and the camera data read from the original files. Edit it to add titles (`cap`) or reorder photos.
-- `site/p/` holds two sizes of each photo: `<id>-s.jpg` (760 px, gallery) and `<id>-l.jpg` (1600 px, lightbox and hero).
+- `site/p/` holds three sizes of each photo, converted to sRGB: `<id>-s.jpg` (760 px, gallery grid), `<id>-l.jpg` (1600 px) and `<id>-x.jpg` (2880 px). The page picks the size that suits the screen.
 - `app.py` serves `site/`, a `/healthz` check for Railway, and `/api/contact` for the enquiry form.
 
 ## Adding photos
@@ -15,11 +15,11 @@ pip install pillow
 python tools/add_photos.py "Okanagan" ~/Pictures/export/*.jpg
 python tools/add_photos.py "Utah" watchman.jpg --title "The Watchman at last light"
 ```
-The script makes the two web sizes in `site/p/`, reads camera, lens, settings, date and GPS from each file, and adds the photos to the front of that collection in `site/photos.json`. Collections with filters on the page: Utah, Nevada, Okanagan, Vancouver Island, Canadian Rockies, Maui, Drone Landscapes, Astrophotography, Wildlife.
+The script makes the three web sizes in `site/p/`, reads camera, lens, settings, date and GPS from each file, and adds the photos to the front of that collection in `site/photos.json`. Collections with filters on the page: Utah, Nevada, Okanagan, Vancouver Island, Canadian Rockies, Maui, Drone Landscapes, Astrophotography, Wildlife.
 
 Commit and push to `main`; Railway redeploys in about a minute.
 
-To remove a photo, delete its entry from `site/photos.json` and its two files from `site/p/`. To retitle one, set its `cap` field.
+To remove a photo, delete its entry from `site/photos.json` and its three files from `site/p/`. To retitle one, set its `cap` field.
 
 ## Run locally
 ```bash

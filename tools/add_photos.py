@@ -3,7 +3,7 @@
     python tools/add_photos.py "Okanagan" ~/Pictures/export/*.jpg
     python tools/add_photos.py "Utah" sunset.jpg --title "The Watchman at last light"
 
-For each JPEG this makes the two web sizes in site/p/ and adds an entry to
+For each JPEG this makes the three web sizes in site/p/ and adds an entry to
 site/photos.json, with camera, lens, settings, date and GPS read from the
 file's EXIF. New photos go first in their collection. Re-adding a file that
 is already on the site is skipped.
@@ -12,16 +12,21 @@ Needs Pillow:  pip install pillow
 """
 import argparse
 import hashlib
+import io
 import json
 import os
 import sys
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageCms, ImageOps
 from PIL.ExifTags import GPSTAGS, TAGS
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SITE = os.path.join(ROOT, "site")
 PHOTOS = os.path.join(SITE, "photos.json")
+# Long-edge sizes: s for the gallery grid, l and x for the slideshow and full-screen view.
+SIZES = (("s", (760, 1000), 78), ("l", (1600, 1600), 82), ("x", (2880, 2880), 84))
+SRGB = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB"))
+Image.MAX_IMAGE_PIXELS = None
 
 # Collections the page already has filters for. A new name works too, but
 # only shows under "All work" until the page gets a filter chip for it.
@@ -70,7 +75,18 @@ def region_for(col, e):
     return None
 
 
-def entry(pid, col, im, e, title):
+def to_srgb(src, im):
+    """Convert Adobe RGB and other wide-gamut files so colours show correctly in browsers."""
+    icc = src.info.get("icc_profile")
+    if not icc:
+        return im
+    prof = ImageCms.ImageCmsProfile(io.BytesIO(icc))
+    if "sRGB" in ImageCms.getProfileDescription(prof):
+        return im
+    return ImageCms.profileToProfile(im, prof, SRGB, renderingIntent=0, outputMode="RGB")
+
+
+def entry(pid, col, im, e, title, widths):
     aerial = e["model"] in DRONES or col == "Drone Landscapes"
     t = e["t"]
     shutter = (f"1/{round(1 / t)} s" if t < 1 else f"{t:g} s") if t else None
@@ -80,7 +96,7 @@ def entry(pid, col, im, e, title):
     settings = " · ".join(x for x in [focal, f"f/{e['f']:g}" if e["f"] else None, shutter,
                                        f"ISO {e['iso']}" if e["iso"] else None] if x)
     rec = {"id": pid, "col": col, "r": region_for(col, e), "a": 1 if aerial else 0,
-           "ar": round(im.width / im.height, 4),
+           "ar": round(im.width / im.height, 4), "w": widths,
            "cam": DRONES.get(e["model"]) or CAMERAS.get(e["model"]) or e["model"],
            "lens": e["lens"], "set": settings, "date": e["date"],
            "gps": [round(e["lat"], 4), round(e["lon"], 4)] if "lat" in e else None,
@@ -114,15 +130,18 @@ def main():
         try:
             src = Image.open(path)
             e = read_exif(src)
-            im = ImageOps.exif_transpose(src).convert("RGB")
+            im = to_srgb(src, ImageOps.exif_transpose(src).convert("RGB"))
         except OSError as err:
             print(f"skip  {path} ({err}; export it as a JPEG)")
             continue
-        for suffix, box, q in (("l", (1600, 1600), 80), ("s", (760, 1000), 76)):
+        widths = []
+        for suffix, box, q in SIZES:
             out = im.copy()
             out.thumbnail(box, Image.LANCZOS)
-            out.save(os.path.join(SITE, "p", f"{pid}-{suffix}.jpg"), quality=q, optimize=True, progressive=True)
-        rec = entry(pid, args.collection, im, e, args.title)
+            out.save(os.path.join(SITE, "p", f"{pid}-{suffix}.jpg"), quality=q, optimize=True,
+                     progressive=True, icc_profile=SRGB.tobytes())
+            widths.append(out.width)
+        rec = entry(pid, args.collection, im, e, args.title, widths)
         added.append(rec)
         have.add(pid)
         print(f"added {path} -> {pid} ({rec.get('cam', 'unknown camera')}, {rec.get('date', 'no date')})")

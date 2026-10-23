@@ -6,7 +6,7 @@
 <meta name="description" content="Landscape, aerial and night-sky photography by Matt Blair: the desert Southwest, British Columbia and the Rockies, and Maui. Prints and licensing from Kelowna, B.C.">
 <meta property="og:title" content="Matt Blair Photography">
 <meta property="og:description" content="Landscapes from the ground, the air and the night sky.">
-<meta property="og:image" content="/p/042f9eac0cc9-l.jpg">
+<meta property="og:image" content="https://mattblairphotography.ca/p/042f9eac0cc9-l.jpg">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0d0e10">
 <link rel="icon" href="/logo.png">
@@ -345,6 +345,8 @@ const HERO=["042f9eac0cc9","6f178c1a6b97","91685b183f34","14ed62e1668d","06149ea
 const $=s=>document.querySelector(s);
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e};
 const src=(id,sz)=>"p/"+id+"-"+sz+".jpg";
+/* srcset over the sizes a photo has: s 760, l 1600, x 2880 px on the long edge */
+const set=(p,ks)=>ks.map(k=>src(p.id,k)+" "+p.w["slx".indexOf(k)]+"w").join(",");
 const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 const go=sel=>$(sel).scrollIntoView({behavior:reduce?"auto":"smooth"});
 const fmtGps=g=>Math.abs(g[0]).toFixed(4)+"° "+(g[0]>=0?"N":"S")+", "+Math.abs(g[1]).toFixed(4)+"° "+(g[1]>=0?"E":"W");
@@ -355,7 +357,7 @@ const fmtDate=d=>{if(!d)return"";const [y,m]=d.split("-");return MONTHS[+m-1]+" 
 
 /* hero */
 const hero=$("#hero"),dots=$("#h-dots");let hi=0,hT;
-HERO.forEach((id,i)=>{const im=new Image();im.src=src(id,"l");im.alt="";if(!i){im.className="on";im.fetchPriority="high"}hero.insertBefore(im,hero.firstChild);
+HERO.forEach((id,i)=>{const im=new Image();im.sizes="(orientation:portrait) 250vw,100vw";im.srcset=set(byId[id],["l","x"]);im.src=src(id,"l");im.alt="";if(!i){im.className="on";im.fetchPriority="high"}hero.insertBefore(im,hero.firstChild);
   const d=el("button");d.type="button";d.setAttribute("aria-label","Show photo "+(i+1));d.onclick=()=>{show(i);restart()};dots.appendChild(d)});
 const himgs=[...hero.querySelectorAll("img")].reverse();
 function show(i){hi=i;himgs.forEach((im,j)=>im.classList.toggle("on",j===i));[...dots.children].forEach((d,j)=>d.setAttribute("aria-current",j===i));
@@ -377,7 +379,7 @@ const cols={};P.forEach(p=>(cols[p.col]=cols[p.col]||[]).push(p));
 const order=[];const qs=Object.values(cols).map(a=>a.slice());while(qs.some(q=>q.length))qs.forEach(q=>q.length&&order.push(q.shift()));
 const wall=$("#wall");
 order.forEach(p=>{const b=el("button","tile");b.type="button";b.setAttribute("aria-label",label(p)+", "+where(p));
-  const im=new Image();im.loading="lazy";im.decoding="async";im.alt="";im.width=760;im.height=Math.round(760/p.ar);im.onload=()=>im.classList.add("ld");im.src=src(p.id,"s");b.appendChild(im);
+  const im=new Image();im.loading="lazy";im.decoding="async";im.alt="";im.width=760;im.height=Math.round(760/p.ar);im.onload=()=>im.classList.add("ld");im.sizes="(max-width:560px) 100vw,(max-width:980px) 50vw,410px";im.srcset=set(p,["s","l"]);im.src=src(p.id,"s");b.appendChild(im);
   b.insertAdjacentHTML("beforeend",(p.a?'<span class="badge">AERIAL</span>':"")+`<span class="cap"><strong>${label(p)}</strong><span>${[where(p).toUpperCase(),fmtDate(p.date).toUpperCase()].filter(Boolean).join(" · ")}</span></span>`);
   b.onclick=()=>{const list=order.filter(q=>match(q,filter));openLB(list,list.indexOf(p))};p._t=b;wall.appendChild(b)});
 function setFilter(v){filter=v;fbar.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.v===v||(v.startsWith("r:")&&REG[v.slice(2)].cols.includes(c.dataset.v.slice(2)))));
@@ -386,19 +388,19 @@ setFilter("all");
 
 /* regions */
 Object.entries(REG).forEach(([k,R])=>{const n=P.filter(p=>p.r===k&&!SUBJ[p.col]).length;const b=el("button","region");b.type="button";
-  b.innerHTML=`<img src="${src(R.cover,"l")}" alt="" loading="lazy"><span class="tick" style="background:${R.color}"></span><span class="lbl"><h3>${R.name}</h3><span class="meta"><span>${R.span}</span><span>${n} frames</span></span></span>`;
+  b.innerHTML=`<img src="${src(R.cover,"l")}" srcset="${set(byId[R.cover],["s","l","x"])}" sizes="(max-width:820px) 100vw,420px" alt="" loading="lazy"><span class="tick" style="background:${R.color}"></span><span class="lbl"><h3>${R.name}</h3><span class="meta"><span>${R.span}</span><span>${n} frames</span></span></span>`;
   b.onclick=()=>{setFilter("r:"+k);go("#work")};$("#region-tiles").appendChild(b)});
 
 /* aerial */
 const AER="54cc926f587b",ap=byId[AER],hud=$("#hud");
-hud.innerHTML=`<img src="${src(AER,"l")}" alt="Top-down drone view of a forest road through spruce and larch" loading="lazy"><div class="ov"><div class="tl"><span>GPS ALT ${ap.alt.toLocaleString()} m</span><span>GIMBAL −90°</span></div><div class="tr"><span>${fmtGps(ap.gps).split(", ")[0]}</span><span>${fmtGps(ap.gps).split(", ")[1]}</span></div><div class="bl"><span>${ap.cam.toUpperCase()}</span><span>${ap.set.split(" · ").slice(1).join(" · ")}</span></div><div class="br"><span>${fmtDate(ap.date).toUpperCase()}</span><span>OKANAGAN, B.C.</span></div><div class="cross"></div></div>`;
+hud.innerHTML=`<img src="${src(AER,"l")}" srcset="${set(ap,["l","x"])}" sizes="(max-width:860px) 100vw,700px" alt="Top-down drone view of a forest road through spruce and larch" loading="lazy"><div class="ov"><div class="tl"><span>GPS ALT ${ap.alt.toLocaleString()} m</span><span>GIMBAL −90°</span></div><div class="tr"><span>${fmtGps(ap.gps).split(", ")[0]}</span><span>${fmtGps(ap.gps).split(", ")[1]}</span></div><div class="bl"><span>${ap.cam.toUpperCase()}</span><span>${ap.set.split(" · ").slice(1).join(" · ")}</span></div><div class="br"><span>${fmtDate(ap.date).toUpperCase()}</span><span>OKANAGAN, B.C.</span></div><div class="cross"></div></div>`;
 hud.style.cursor="zoom-in";hud.onclick=()=>{const l=order.filter(p=>p.a);openLB(l,l.indexOf(ap))};
 const aer=P.filter(p=>p.a);$("#aerial-count").textContent=aer.length;$("#aerial-alt").textContent=Math.max(...aer.map(p=>p.alt||0)).toLocaleString()+" m";
 $("#aerial-only").onclick=()=>{setFilter("aerial");go("#work")};
 
 /* night */
 const astro=order.filter(p=>p.col==="Astrophotography");const NH="2fc1bf78a4c6";
-$("#night-hero").innerHTML=`<img src="${src(NH,"l")}" alt="A wide nebula field in red and gold" loading="lazy">`;$("#night-hero").style.cursor="zoom-in";$("#night-hero").onclick=()=>openLB(astro,astro.indexOf(byId[NH]));
+$("#night-hero").innerHTML=`<img src="${src(NH,"l")}" srcset="${set(byId[NH],["l","x"])}" sizes="(max-width:860px) 100vw,650px" alt="A wide nebula field in red and gold" loading="lazy">`;$("#night-hero").style.cursor="zoom-in";$("#night-hero").onclick=()=>openLB(astro,astro.indexOf(byId[NH]));
 astro.filter(p=>p.id!==NH).slice(0,3).forEach(p=>{const b=el("button");b.type="button";b.setAttribute("aria-label",label(p));b.innerHTML=`<img src="${src(p.id,"s")}" alt="" loading="lazy">`;b.onclick=()=>openLB(astro,astro.indexOf(p));$("#night-strip").appendChild(b)});
 $("#night-only").onclick=()=>{setFilter("c:Astrophotography");go("#work")};
 
@@ -406,10 +408,10 @@ $("#night-only").onclick=()=>{setFilter("c:Astrophotography");go("#work")};
 const lb=$("#lb"),lbi=$("#lb-img");let L=[],li=0,lastF;
 function openLB(list,i){L=list;li=Math.max(0,i);lastF=document.activeElement;lb.hidden=false;document.documentElement.style.overflow="hidden";showLB();$("#lb-close").focus()}
 function closeLB(){lb.hidden=true;document.documentElement.style.overflow="";lastF&&lastF.focus()}
-function showLB(){const p=L[li];lbi.src=src(p.id,"l");lbi.alt=label(p);$("#lb-title").textContent=label(p);$("#lb-place").textContent=where(p);$("#lb-pos").textContent=(li+1)+" / "+L.length;
+function showLB(){const p=L[li];lbi.sizes="100vw";lbi.srcset=set(p,["l","x"]);lbi.src=src(p.id,"l");lbi.alt=label(p);$("#lb-title").textContent=label(p);$("#lb-place").textContent=where(p);$("#lb-pos").textContent=(li+1)+" / "+L.length;
   const rows=[["Camera",p.cam],["Lens",p.lens],["Settings",p.set],["Date",fmtDate(p.date)],["Location",p.gps&&fmtGps(p.gps)],[p.a?"GPS altitude":"Elevation",p.alt!=null&&p.alt.toLocaleString()+" m"]].filter(r=>r[1]);
   $("#lb-dl").innerHTML=rows.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join("");
-  [L[(li+1)%L.length],L[(li-1+L.length)%L.length]].forEach(q=>{const x=new Image();x.src=src(q.id,"l")});
+  [L[(li+1)%L.length],L[(li-1+L.length)%L.length]].forEach(q=>{const x=new Image();x.sizes="100vw";x.srcset=set(q,["l","x"])});
   $("#lb-prev").style.visibility=$("#lb-next").style.visibility=L.length>1?"visible":"hidden"}
 const step=d=>{li=(li+d+L.length)%L.length;showLB()};
 $("#lb-close").onclick=closeLB;$("#lb-prev").onclick=()=>step(-1);$("#lb-next").onclick=()=>step(1);
