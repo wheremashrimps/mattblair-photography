@@ -10,6 +10,7 @@
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0d0e10">
 <link rel="icon" href="/logo.png">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
 <title>Matt Blair Photography</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -195,6 +196,17 @@ footer{border-top:1px solid var(--line);padding-block:30px;color:var(--muted);fo
 footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap}
 footer img{height:30px;width:auto;opacity:.7}
 
+/* photo map */
+.mapwrap{position:relative}
+#photomap{height:clamp(380px,64vh,660px);background:var(--surface);border:1px solid var(--line)}
+.map-legend{display:flex;gap:8px 20px;flex-wrap:wrap;margin-top:14px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted)}
+.map-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+.maplibregl-popup.photo-popup .maplibregl-popup-content{background:var(--surface);color:var(--fg);padding:0;border-radius:2px;border:1px solid var(--line);overflow:hidden;width:200px}
+.maplibregl-popup.photo-popup .maplibregl-popup-tip{border-top-color:var(--surface);border-bottom-color:var(--surface)}
+.photo-popup img{display:block;width:100%;height:auto}
+.photo-popup div div{padding:8px 10px;font-size:13px;line-height:1.35}
+.maplibregl-ctrl-attrib{font-size:11px}
+
 /* lightbox */
 .lb{position:fixed;inset:0;z-index:100;background:rgba(6,7,8,.97);display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(16px,env(safe-area-inset-left,0px))}
 .lb-bar{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -217,7 +229,7 @@ footer img{height:30px;width:auto;opacity:.7}
 <header class="top"><div class="wrap">
   <a class="mark" href="#top"><img src="logo.png" alt="Matt Blair"><span>PHOTOGRAPHY</span></a>
   <nav class="main" aria-label="Main">
-    <a href="#film">Film</a><a href="#work">Work</a><a class="opt" href="#regions">Places</a><a class="opt" href="#aerial">Aerial</a><a class="opt" href="#night">Night sky</a><a href="#contact">Contact</a>
+    <a href="#film">Film</a><a href="#work">Work</a><a class="opt" href="#regions">Places</a><a class="opt" href="#map">Map</a><a class="opt" href="#aerial">Aerial</a><a class="opt" href="#night">Night sky</a><a href="#contact">Contact</a>
   </nav>
 </div></header>
 
@@ -251,6 +263,14 @@ footer img{height:30px;width:auto;opacity:.7}
       <p>Sandstone in Utah and Nevada, lakes and mountains from the Okanagan to the Rockies, and volcanic coastline on Maui. Pick one to filter the work below.</p>
     </div>
     <div class="regions" id="region-tiles"></div>
+  </div></section>
+
+  <section id="map" style="padding-top:0"><div class="wrap">
+    <div class="sec-head">
+      <div><div class="eyebrow">Where it was taken</div><h2>Photo map</h2></div>
+      <p id="map-note">Every photo with a location. Zoom in, hover for a preview, click to open it.</p>
+    </div>
+    <div class="mapwrap"><div id="photomap" role="region" aria-label="Map of photo locations"></div><div class="map-legend" id="map-legend"></div></div>
   </div></section>
 
   <section id="work" style="padding-top:0"><div class="wrap">
@@ -449,6 +469,34 @@ $("#contact").addEventListener("submit",e=>{e.preventDefault();const f=e.target,
     .then(r=>{if(!r.ok)throw r;s.textContent="Thanks, your message was sent. I'll reply by email.";f.reset()})
     .catch(()=>{s.textContent="The message didn't send. Please try again later."})
     .finally(()=>{btn.disabled=false})});
+/* photo map: MapLibre, loaded when the section nears the screen; dots are photos that have a location */
+const geo=P.filter(p=>p.gps),mbox=$("#photomap");
+$("#map-note").textContent=geo.length+" of "+P.length+" photos have a location. Zoom in, hover for a preview, click to open it.";
+$("#map-legend").innerHTML=Object.entries(REG).map(([k,R])=>'<span><i style="background:'+R.color+'"></i>'+R.short+' '+geo.filter(p=>p.r===k).length+'</span>').join("");
+const RC={sw:"#d39462",ca:"#8fb6c6",hi:"#9fbd86"};
+function initMap(){
+  const ml=window.maplibregl,map=new ml.Map({container:mbox,style:"https://tiles.openfreemap.org/styles/liberty",cooperativeGestures:true,attributionControl:{compact:true},center:[-118,45],zoom:3});
+  mbox.map=map;map.addControl(new ml.NavigationControl({showCompass:false}),"top-right");
+  const b=new ml.LngLatBounds();geo.forEach(p=>b.extend([p.gps[1],p.gps[0]]));map.fitBounds(b,{padding:50,duration:0,maxZoom:9});
+  const pts={type:"FeatureCollection",features:geo.map(p=>({type:"Feature",properties:{id:p.id,r:p.r||""},geometry:{type:"Point",coordinates:[p.gps[1],p.gps[0]]}}))};
+  map.on("load",()=>{
+    map.addSource("dem",{type:"raster-dem",tiles:["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],encoding:"terrarium",tileSize:256,maxzoom:15,attribution:"Terrain: Mapzen / AWS Open Data"});
+    map.addLayer({id:"hillshade",type:"hillshade",source:"dem",paint:{"hillshade-exaggeration":.4}});
+    map.addSource("photos",{type:"geojson",data:pts,cluster:true,clusterRadius:40,clusterMaxZoom:13});
+    map.addLayer({id:"clusters",type:"circle",source:"photos",filter:["has","point_count"],paint:{"circle-color":"#1d2024","circle-stroke-color":"#ece6dc","circle-stroke-width":1.5,"circle-radius":["step",["get","point_count"],14,10,18,30,22]}});
+    map.addLayer({id:"cluster-count",type:"symbol",source:"photos",filter:["has","point_count"],layout:{"text-field":["get","point_count_abbreviated"],"text-font":["Noto Sans Regular"],"text-size":12},paint:{"text-color":"#ece6dc"}});
+    map.addLayer({id:"photo-dots",type:"circle",source:"photos",filter:["!",["has","point_count"]],paint:{"circle-radius":6.5,"circle-color":["match",["get","r"],"sw",RC.sw,"ca",RC.ca,"hi",RC.hi,"#ece6dc"],"circle-stroke-color":"#fff","circle-stroke-width":1.5}});
+    const pop=new ml.Popup({closeButton:false,closeOnClick:false,offset:10,className:"photo-popup",maxWidth:"220px"}),hand=on=>{map.getCanvas().style.cursor=on?"pointer":""};
+    map.on("mouseenter","photo-dots",e=>{hand(1);const f=e.features[0],p=byId[f.properties.id],d=document.createElement("div"),im=new Image(),c=document.createElement("div");
+      im.src=src(p.id,"s");im.alt="";c.textContent=label(p)+" · "+where(p);d.append(im,c);pop.setLngLat(f.geometry.coordinates).setDOMContent(d).addTo(map)});
+    map.on("mouseleave","photo-dots",()=>{hand(0);pop.remove()});
+    map.on("click","photo-dots",e=>{const p=byId[e.features[0].properties.id],l=order.filter(q=>q.gps);openLB(l,l.indexOf(p))});
+    map.on("mouseenter","clusters",()=>hand(1));map.on("mouseleave","clusters",()=>hand(0));
+    map.on("click","clusters",async e=>{const f=map.queryRenderedFeatures(e.point,{layers:["clusters"]})[0],z=await map.getSource("photos").getClusterExpansionZoom(f.properties.cluster_id);map.easeTo({center:f.geometry.coordinates,zoom:z+.5})});
+  });
+}
+if(geo.length)new IntersectionObserver((es,o)=>{if(!es[0].isIntersecting)return;o.disconnect();
+  const s=document.createElement("script");s.src="vendor/maplibre-gl.js";s.onload=initMap;document.head.appendChild(s)},{rootMargin:"600px"}).observe(mbox);
 });
 
 /* film: cards open a full-screen player (YouTube, privacy-friendly embed) */

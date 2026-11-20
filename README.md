@@ -24,6 +24,9 @@ To remove a photo, delete its entry from `site/photos.json` and its three files 
 ## Adding videos
 Upload to YouTube, then add a line to `site/videos.json` with the video ID (the part after `v=` in the link), a title and the length. Cards show in file order and play in place. Commit and push.
 
+## Photo map
+The map section plots every photo in `site/photos.json` that has a `gps` value (MapLibre GL JS, vendored in `site/vendor/`, loaded only when the map nears the screen). Basemap: OpenFreeMap, hillshade from AWS terrain tiles. Photos without GPS show in the gallery but not on the map.
+
 ## Run locally
 ```bash
 python3 -m venv venv && source venv/bin/activate
