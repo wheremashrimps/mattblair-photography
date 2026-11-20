@@ -21,6 +21,9 @@ Commit and push to `main`; Railway redeploys in about a minute.
 
 To remove a photo, delete its entry from `site/photos.json` and its three files from `site/p/`. To retitle one, set its `cap` field.
 
+## Adding videos
+Upload to YouTube, then add a line to `site/videos.json` with the video ID (the part after `v=` in the link), a title and the length. Cards show in file order and play in place. Commit and push.
+
 ## Run locally
 ```bash
 python3 -m venv venv && source venv/bin/activate
